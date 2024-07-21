@@ -6,6 +6,7 @@ import base64
 from io import BytesIO
 import os
 from PIL import ImageOps  # 画像処理のためのライブラリをインポート
+import time
 
 # シークレットからAPIキーを取得
 openai_api_key = st.secrets["api"]["OPENAI_API_KEY"]
@@ -16,19 +17,34 @@ if openai_api_key is None:
 # APIキーをlitellmに設定
 litellm.api_key = openai_api_key
 
-
-
-
-
 # モデル選択のためのセレクタを追加
-#model_options = ["claude-3-haiku-20240307","gpt-4o-mini", "claude-3-5-sonnet-20240620", "gemini-pro-vision"]
-#selected_model = st.selectbox("使用するモデルを選択してください", model_options)
+st.title("KIYOSHIが一言")
 
-# 機能選択のためのセレクタを追加
 function_options = ["ボケて", "褒めて", "ニックネームつけて"]
-selected_function = st.selectbox("機能を選択してください", function_options)
+selected_function = st.radio("機能を選択してください", function_options)
+
+def loading_animation():
+    max_columns = 10  # 一行に表示する🦑アイコンの最大数
+    icon = "🦑"
+    loading_text = st.empty()
+
+    for i in range(30):  # 最大30回ループ
+        rows = i // max_columns + 1
+        cols = i % max_columns + 1
+        text = (icon * cols + "\n") * rows
+        loading_text.text(text)
+        time.sleep(0.5)
+        if st.session_state.get('response_received', False):
+            loading_text.empty()
+            break
 
 def generate_response(image):
+    # ローディングアニメーションを開始
+    st.session_state['response_received'] = False
+    loading_placeholder = st.empty()
+    loading_placeholder.write("AIの応答を待っています...")
+    loading_animation()  # ローディングアニメーションを実行
+
     # 画像をbase64エンコード
     buffered = BytesIO()
     image.save(buffered, format="PNG")
@@ -38,19 +54,17 @@ def generate_response(image):
         if selected_function == "ボケて":
             user_prompt = "この写真についておかしな例えでボケてください。"
         elif selected_function == "褒めて":
-
             user_prompt = "この写真についてハイテンションで褒めてください。"
-        else: # ニックネームつける
-            user_prompt = "この写真の人物にふさわしい少し変な面白おかしいニックネームをつけてください。動物や歴史上の人物なども可。二つ名、通り名、屋号も考えてください"
+        else:  # ニックネームつける
+            user_prompt = "この写真の人物にふさわしい少し変な面白おかしいニックネームをつけてください。動物や昆虫、微生物、歴史上の人物なども可。二つ名、通り名、屋号も考えてください"
 
         # litellmを使用してボケ/褒めを生成
         response = completion(
- #           model=selected_model,  # 選択されたモデルを使用
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "あなたは宮城出身の、３度の飯よりイカが大好きなおっさんです。写真の画像を自分と勘違いしないようにしてください。必ず日本語の宮城弁で話します。決して相手を貶さないでください。いかなる場合でも相手を不快にさせることはしないでください。ボケる場合は、相手を不快にさせず、面白い例えを考えてください"
+                    "content": "あなたは宮城出身の、３度の飯よりイカが大好きなおっさんです。写真の画像を自分と勘違いしないようにしてください。必ず日本語の宮城弁で話します。決して相手を貶さないでください。いかなる場合でも相手を不快にさせることはしないでください。ボケる場合は、相手を不快にさせず、面白い例えを考えてください。たまにイカを絡めて回答して"
                 },
                 {
                     "role": "user",
@@ -60,23 +74,23 @@ def generate_response(image):
                     ]
                 }
             ],
-            max_tokens=200  # 応答の最大トークン数を設定
+            max_tokens=150  # 応答の最大トークン数を設定
         )
+        st.session_state['response_received'] = True
+        loading_placeholder.empty()  # ローディング表示を消す
         if response and response.choices:
             return response.choices[0].message.content
         else:
             return "AIからの返答がありませんでした。"
         
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"エラーが発生しました: {e}")
+    except Exception as elevenlabs:
+        st.session_state['response_received'] = True
+        loading_placeholder.empty()  # ローディング表示を消す
+        st.error(f"エラーが発生しました: {elevenlabs}")
         return None
-
-st.title("ボケて褒めてニックネームつけて")
 
 # 画像ソースの選択
 image_source = st.radio("画像ソースを選択してください", ["カメラ撮影", "ファイルアップロード"])
-
 
 def compress_image(image):
     # 画像を圧縮する関数
@@ -96,17 +110,12 @@ def compress_image(image):
 
     return image, original_size, compressed_size 
 
-
-
-
 if image_source == "ファイルアップロード":
     uploaded_file = st.file_uploader("写真をアップロードしてください", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         image, original_size, compressed_size = compress_image(image)  # 画像を圧縮
-        st.image(image, caption='アップロードした写真', use_column_width=True)
-    #    st.write(f"元の画像サイズ: {original_size / 1024:.2f} KB")  # 元のサイズを表示
-    #    st.write(f"圧縮後の画像サイズ: {compressed_size / 1024:.2f} KB")  # 圧縮後のサイズを表示
+#        st.image(image, caption='アップロードした写真', use_column_width=True)
         response = generate_response(image)
         if response:
             st.write(response)
@@ -116,8 +125,7 @@ elif image_source == "カメラ撮影":
     if camera_image is not None:
         image = Image.open(camera_image)
         image, original_size, compressed_size = compress_image(image)  # 画像を圧縮
-    #    st.write(f"元の画像サイズ: {original_size / 1024:.2f} KB")  # 元のサイズを表示
-    #    st.write(f"圧縮後の画像サイズ: {compressed_size / 1024:.2f} KB")  # 圧縮後のサイズを表示
+#        st.image(image, caption='撮影した写真', use_column_width=True)
         response = generate_response(image)
         if response:
             st.write(response)
