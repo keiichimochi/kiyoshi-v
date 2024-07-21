@@ -63,7 +63,7 @@ def generate_response(image):
                     ]
                 }
             ],
-            max_tokens=100  # 応答の最大トークン数を設定
+            max_tokens=150  # 応答の最大トークン数を設定
         )
         if response and response.choices:
             return response.choices[0].message.content
