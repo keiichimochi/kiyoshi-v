@@ -24,7 +24,7 @@ litellm.api_key = openai_api_key
 #model_options = ["claude-3-haiku-20240307","gpt-4o-mini", "claude-3-5-sonnet-20240620", "gemini-pro-vision"]
 #selected_model = st.selectbox("使用するモデルを選択してください", model_options)
 
-st.title("KIYOSHI's eye👀")
+st.title("KIYOSHIが一言")
 
 function_options = ["ボケて", "褒めて", "ニックネームつけて"]
 selected_function = st.radio("機能を選択してください", function_options)
