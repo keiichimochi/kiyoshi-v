@@ -74,6 +74,7 @@ def generate_response(image):
                     ]
                 }
             ],
+            temperature=0.9,
             max_tokens=150  # 応答の最大トークン数を設定
         )
         st.session_state['response_received'] = True
