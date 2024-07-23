@@ -18,7 +18,7 @@ if openai_api_key is None:
 litellm.api_key = anthropic_api_key
 
 # モデル選択のためのセレクタを追加
-st.title("KIYOSHIが一言")
+st.title("KIYOSHIが一言！")
 
 function_options = ["ボケて", "褒めて", "ニックネームつけて"]
 selected_function = st.radio("機能を選択してください", function_options)
