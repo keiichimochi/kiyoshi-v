@@ -23,23 +23,31 @@ st.title("KIYOSHIが一言")
 function_options = ["ボケて", "褒めて", "ニックネームつけて"]
 selected_function = st.radio("機能を選択してください", function_options)
 
+
+def ensure_rgb(image):
+    if image.mode in ('RGBA', 'LA') or (image.mode == 'P' and 'transparency' in image.info):
+        # アルファチャンネルを含む画像をRGBに変換
+        background = Image.new('RGB', image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3])  # 3 is the alpha channel
+        return background
+    else:
+        # すでにRGBの場合はそのまま返す
+        return image.convert('RGB')
+    
 def compress_image(image):
-    # 画像を圧縮する関数
-    original_size = image.size[0] * image.size[1] * len(image.getbands())  # より正確なファイルサイズ推定
-    target_size = 100 * 1024  # 目標サイズ（100KB）
+    # RGBフォーマットに変換
+    image = ensure_rgb(image)
+    
+    # 以下、既存の圧縮処理
+    original_size = image.size[0] * image.size[1] * len(image.getbands())
+    target_size = 100 * 1024
 
     if original_size > target_size:
-        # 圧縮率を計算
         compression_ratio = math.sqrt(target_size / original_size)
-        
-        # 新しいサイズを計算
         new_width = int(image.size[0] * compression_ratio)
         new_height = int(image.size[1] * compression_ratio)
-        
-        # サイズを調整
         image = image.resize((new_width, new_height), Image.LANCZOS)
         
-        # 品質を調整して保存
         quality = 85
         while True:
             buffered = BytesIO()
@@ -50,7 +58,6 @@ def compress_image(image):
                 break
             
             quality -= 5
-
     else:
         buffered = BytesIO()
         image.save(buffered, format="JPEG", quality=85)
